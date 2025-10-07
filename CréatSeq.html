@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Créateur de Séquences Musicales - Julien Sang</title>
+    <!-- Favicon SVG intégré -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234F46E5'/><path d='M30 60V35l30-7.5v32.5M30 60c0 2.76-3.36 5-7.5 5s-7.5-2.24-7.5-5 3.36-5 7.5-5 7.5 2.24 7.5 5zm30-7.5c0 2.76-3.36 5-7.5 5s-7.5-2.24-7.5-5 3.36-5 7.5-5 7.5 2.24 7.5 5zM30 42.5l30-7.5' stroke='white' stroke-width='3' fill='none'/><circle cx='22.5' cy='60' r='7.5' fill='white'/><circle cx='52.5' cy='52.5' r='7.5' fill='white'/><path d='M70 40c0-5.5 4.5-10 10-10s10 4.5 10 10-4.5 10-10 10' stroke='white' stroke-width='3' fill='none'/><circle cx='80' cy='50' r='3' fill='white'/></svg>" type="image/svg+xml">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Icônes SVG simples (remplace lucide-react)
+        const Icons = {
+            Music: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>,
+            MusicLogo: () => (
+                <svg className="w-12 h-12" viewBox="0 0 100 100" fill="none">
+                    <rect width="100" height="100" rx="20" fill="url(#gradient)"/>
+                    <path d="M30 60V35l30-7.5v32.5M30 60c0 2.76-3.36 5-7.5 5s-7.5-2.24-7.5-5 3.36-5 7.5-5 7.5 2.24 7.5 5zm30-7.5c0 2.76-3.36 5-7.5 5s-7.5-2.24-7.5-5 3.36-5 7.5-5 7.5 2.24 7.5 5zM30 42.5l30-7.5" stroke="white" strokeWidth="3" fill="none"/>
+                    <circle cx="22.5" cy="60" r="7.5" fill="white"/>
+                    <circle cx="52.5" cy="52.5" r="7.5" fill="white"/>
+                    <path d="M70 40c0-5.5 4.5-10 10-10s10 4.5 10 10-4.5 10-10 10" stroke="white" strokeWidth="3" fill="none"/>
+                    <circle cx="80" cy="50" r="3" fill="white"/>
+                    <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#4F46E5"/>
+                            <stop offset="50%" stopColor="#7C3AED"/>
+                            <stop offset="100%" stopColor="#EC4899"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            ),
+            Plus: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
+            X: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>,
+            ChevronDown: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>,
+            ChevronUp: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>,
+            Edit: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
+            Trash2: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
+            Download: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>,
+            Save: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V2" /></svg>,
+            AlertCircle: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+            Search: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
+            FileText: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+        };
+
+        // Données complètes
+        const objectifsFinCycle = [
+            { id: 1, titre: "Mobiliser des techniques vocales et corporelles au service d'un projet d'interprétation ou de création", declinaisons: ["Que la voix participe à la connaissance de son corps", "Que la qualité du geste vocal repose sur la maîtrise simultanée de plusieurs composantes indispensables à la mobilisation corporelle : posture, respiration, phonation, résonance", "À en tirer parti pour moduler son expression (timbre, dynamique, phrasé, etc.)", "À imiter un modèle puis à l'interpréter", "À mémoriser un certain nombre de pièces d'origines variées qui constituent progressivement son répertoire personnel", "À écouter les différentes parties musicales tout en situant son propre rôle", "À écouter sa production pour la corriger et la préciser", "Que l'exigence artistique est aussi nécessaire dans l'unisson que dans la polyphonie, dans le chant accompagné qu'a capella"] },
+            { id: 2, titre: "Identifier, décrire, commenter une organisation musicale complexe et la situer dans un réseau de références musicales et artistiques diversifiées", declinaisons: ["À se rendre disponible à la perception des sons et de la musique (silence, concentration)", "À tirer parti de la subjectivité de sa perception plutôt que d'en rester dépendant", "À formuler l'état de sa perception subjective ou objective avec un vocabulaire approprié et pour partie spécifique", "À décrire, identifier et caractériser les éléments constitutifs du phénomène musical", "À comparer les musiques pour induire, déduire et vérifier des connaissances qu'il utilisera ensuite dans d'autres contextes", "À mobiliser sa mémoire sur des objets musicaux de plus en plus longs et complexes", "À analyser son environnement sonore, à identifier les sources qui le constituent et en comprendre les significations", "Que l'oreille est un instrument intelligent, sensible et souvent virtuose, mais qu'elle est aussi fragile et que son altération est irréversible", "Que l'oreille peut orienter son attention dans une direction particulière, sélectionner certaines informations parmi beaucoup d'autres"] },
+            { id: 3, titre: "Concevoir, créer et réaliser des pièces musicales en référence à des styles, des œuvres, des contraintes d'interprétation ou de diffusion", declinaisons: ["Que sa capacité à percevoir nourrit sa capacité à produire et inversement", "Que la sensibilité musicale peut varier selon l'époque ou la situation géographique du créateur comme de l'auditeur", "Que la musique témoigne toujours de contextes qui la dépassent, qu'il s'agisse de faits historiques ou d'espaces géographiques", "Que la création musicale aujourd'hui est à la croisée de ces diverses influences et traditions, dans tous les cas l'expression d'un contexte original et complexe", "Que toute culture se construit dans un faisceau de traditions et de contraintes et que sa sensibilité dépend pour une large part de la connaissance des codes, conventions et techniques qui la fondent", "Que la maîtrise individuelle dans un cadre collectif n'a de sens que si elle est partagée collectivement", "À improviser dans des cadres définis et/ou sur des carrures brèves"] },
+            { id: 4, titre: "Présenter et justifier des choix d'interprétation et de création, justifier un avis sur une œuvre et défendre un point de vue en l'argumentant", declinaisons: ["Que sentiment et émotion sont les révélateurs d'une réalité complexe et permettent de comprendre les significations portées par la musique", "Que l'émotion est un sentiment relatif, propre à chaque individu, qu'elle ne présume pas de l'objectivité des faits et doit donc être acceptée pour ce qu'elle est chez lui et chez les autres", "À respecter l'expression de la sensibilité de chacun", "À transposer ses connaissances et compétences vers des musiques qu'il écoute de sa propre initiative", "Que la musique est faite de continuités et de ruptures, d'invariants par-delà l'histoire et la géographie mais aussi de spécificités qui jalonnent les langages et les esthétiques", "Que l'histoire européenne de la musique, si elle se développe sur une très longue durée, s'organise en grandes périodes esthétiques"] }
+        ];
+
+        const competencesCycle3 = [
+            { id: 1, categorie: "Chanter et interpréter", competences: ["Reproduire et interpréter un modèle mélodique et rythmique", "Chanter une mélodie simple avec une intonation juste et une intention expressive", "Mémoriser et chanter par cœur un chant appris par imitation, soutenir un bref moment de chant en solo", "Interpréter un chant avec expressivité en respectant plusieurs choix et contraintes précédemment indiqués", "Tenir sa partie dans un bref moment de polyphonie", "Mobiliser son corps pour interpréter, le cas échéant avec des instruments", "Identifier les difficultés rencontrées dans l'interprétation d'un chant", "Répertoire de chansons diverses", "Paramètres du son et techniques vocales pour en jouer de façon expressive", "Vocabulaire de l'expression : quelques nuances simples, tempo, caractère, etc…", "Polyphonie : rôle complémentaire des parties simultanées", "Interprétation d'une musique : compréhension du terme et usage approprié à propos d'une œuvre écoutée et d'une musique produite en classe"] },
+            { id: 2, categorie: "Écouter, comparer et commenter", competences: ["Décrire et comparer des éléments sonores issus de contextes musicaux, d'aires géographiques ou culturelles différents et dans un temps historique, contemporain, proche ou lointain", "Identifier et nommer des ressemblances et différences dans deux extraits musicaux", "Repérer et nommer une organisation simple dans un extrait musical : répétition d'une mélodie, d'un motif rythmique, d'un thème, d'une partie caractéristique, etc. ; en déduire une forme simple (couplet/refrain, ABA par exemple)", "Associer la découverte d'une œuvre à des connaissances construites dans d'autres domaines enseignés", "Vocabulaire simple pour décrire la musique", "Méthodes pour comparer des musiques", "Repères simples dans le temps et dans l'espace", "Quelques grandes œuvres du patrimoine", "Principales caractéristiques de l'orchestre symphonique", "Formes de production variées : vocales, instrumentales, solistes"] },
+            { id: 3, categorie: "Explorer, imaginer et créer", competences: ["Expérimenter les paramètres du son et en imaginer en conséquence des utilisations possibles", "Imaginer des représentations graphiques pour organiser une succession de sons et d'événements sonores", "Inventer une organisation simple à partir de sources sonores sélectionnées (dont la voix) et l'interpréter", "Développement du lexique pour décrire le son instrumental, le son vocal et les objets sonores dans les domaines de la hauteur, du timbre, de la durée, de l'intensité", "Diversité des matériaux sonores et catégories classées par caractéristiques dominantes", "Les postures de l'explorateur du son puis du compositeur : produire, écouter, trier, choisir, organiser, composer", "Le projet graphique (partition adaptée pour organiser la mémoire) et sa traduction sonore", "Les exigences de la musique collective : écoute de l'autre, respect de ses propositions"] },
+            { id: 4, categorie: "Échanger, partager et argumenter", competences: ["Exprimer ses goûts au-delà de son ressenti immédiat", "Écouter et respecter le point de vue des autres et l'expression de leur sensibilité", "Argumenter un jugement sur une musique tout en respectant celui des autres", "Argumenter un choix dans la perspective d'une interprétation collective", "Notions de respect, de bienveillance, de tolérance", "Vocabulaire adapté à l'expression et l'argumentation de son point de vue personnel sur la musique", "Conditions d'un travail collectif : concentration, écoute, respect, autoévaluation, etc…", "Règles et contraintes du travail musical collectif visant l'expression d'un avis partagé comme une production sonore de qualité"] }
+        ];
+
+        const competencesCycle4 = [
+            { id: 1, categorie: "Réaliser des projets musicaux d'interprétation ou de création", competences: ["Définir les caractéristiques musicales d'un projet, puis en assurer la mise en œuvre en mobilisant les ressources adaptées", "Définir les caractéristiques expressives d'un projet, puis en assurer la mise en œuvre", "Réaliser des projets musicaux dans un cadre collectif (classe) en petit groupe ou individuellement", "Interpréter un projet devant d'autres élèves et présenter les choix artistiques effectués", "Tenir sa partie dans un contexte polyphonique", "Répertoire de projets relevant d'esthétiques diverses (chanson actuelle, du patrimoine non occidental ; air d'opéra, de comédie musicale, mélodie, etc.)", "Vocabulaire et techniques de l'interprétation et de l'expression musicales (domaines de la dynamique, du phrasé, du timbre, du rythme, de la hauteur, de la forme, etc.)", "Outils numériques simples pour capter les sons (enregistrement), les manipuler (timbre) et les organiser dans le temps (séquence)", "Démarches de création : chanson sur texte ou musique préexistants ; notions de prosodie"] },
+            { id: 2, categorie: "Écouter, comparer, construire une culture musicale commune", competences: ["Mobiliser sa mémoire sur des objets musicaux longs et complexes", "Situer et comparer des musiques de styles proches ou éloignés dans l'espace et/ou dans le temps pour construire des repères techniques et culturels", "Mettre en lien des caractéristiques musicales et des marqueurs esthétiques avec des contextes historiques, sociologiques, techniques et culturels", "Mobiliser des repères permettant d'identifier les principaux styles musicaux", "Associer des références relevant d'autres domaines artistiques aux œuvres musicales étudiées", "Identifier par comparaison les différences et ressemblances dans l'interprétation d'une œuvre donnée", "Percevoir et décrire les qualités artistiques et techniques d'un enregistrement", "Manipuler plusieurs formes de représentation graphique de la musique à l'aide d'outils numériques", "Lexiques du langage musical", "Grandes catégories musicales", "Quelques grandes œuvres musicales représentatives", "Ensemble de repères relatifs à l'histoire de la musique", "Conscience de la diversité des cultures", "Diversité des postures du mélomane", "Fonctions de la musique dans la société", "Apports du numérique", "Repères sur le monde professionnel", "Physiologie de l'audition", "Environnement sonore", "Notions d'acoustique"] },
+            { id: 3, categorie: "Explorer, imaginer, créer et produire", competences: ["Production : Réutiliser certaines caractéristiques d'une œuvre connue", "Production : Concevoir, réaliser, arranger une pièce", "Production : Identifier les leviers d'amélioration", "Production : Mobiliser un système de codage", "Production : S'autoévaluer", "Perception : Mobiliser les ressources documentaires", "Perception : Réinvestir ses expériences de création", "Perception : Concevoir une playlist", "Perception : S'autoévaluer"] },
+            { id: 4, categorie: "Échanger, partager, argumenter et débattre", competences: ["Production : Développer une critique constructive", "Production : Porter un regard critique", "Production : Contribuer aux choix collectifs", "Production : Transférer les conclusions d'un débat", "Perception : Problématiser l'écoute", "Perception : Distinguer subjectif et objectif", "Perception : Argumenter une critique", "Perception : Respecter la sensibilité", "Perception : S'enrichir de la diversité", "Perception : Distinguer les postures"] }
+        ];
+
+        const domainesTechniques = {
+            1: { titre: "Geste vocal", declinaisons: ["Assurer la posture: enracinement, axe vertical, ouverture, décontraction", "Maîtriser la respiration: détente inspiratoire, tonicité de l'expiration", "Soigner l'attaque, le soutien, la coupure du son, et améliorer l'intonation", "Chanter des sons conjoints et disjoints", "Développer la tessiture, découvrir les registres et choisir le registre adapté", "Moduler son articulation (débit, consonnes percussives...), son accentuation (dynamique, rythmique) et son phrasé", "Moduler sa dynamique (intensité du son, intensité du geste)", "Moduler son timbre (sons voisés et non voisés; consonnes nasales ; homogénéiser les couleurs des voyelles dans le groupe, développer la richesse harmonique)", "Identifier des marqueurs stylistiques dans l'utilisation de la voix", "Prévenir les risques vocaux", "Se concentrer", "Écouter le modèle vocal, le contexte, le résultat", "Imiter et mémoriser un modèle rythmique/mélodique", "Corriger son intonation en s'aidant du contexte harmonique", "Adapter, anticiper la prise d'air et le soutien en fonction du contexte (texte, phrase, tempo...)", "Percevoir, tenir, animer une pulsation", "Traduire par le corps, le geste, la voix une carrure (temps forts, temps faibles)", "Respecter la division du temps (binaire, ternaire)", "Respecter les décalages rythmiques (anacrouse, syncope)", "Tenir sa partie dans un contexte polyphonique, polyrythmique ou hétérophonique", "Chanter de mémoire le répertoire travaillé", "Faire attention à soi, aux autres", "Écouter et coordonner son geste vocal avec celui des autres", "Chanter en classe, en petit groupe, individuellement (partie soliste)", "Mobiliser les notions et techniques des différents domaines pour enrichir sa production vocale", "Identifier les difficultés d'une situation vocale et mobiliser les techniques pour y remédier", "Mobiliser les ressources vocales nécessaires à une expression particulière", "Interpréter plutôt qu'imiter un modèle", "Arranger, pasticher un modèle", "Inventer un élément original pour enrichir la réalisation d'un projet musical", "Réutiliser certaines caractéristiques (style, technique, etc.) d'une œuvre connue", "Faire preuve d'autonomie et d'initiative dans l'interprétation tout en respectant les choix collectifs", "Réinvestir ses expériences personnelles de la création musicale pour élaborer un projet", "Identifier, rechercher et mobiliser à bon escient les ressources documentaires enregistrées pour nourrir la réalisation d'un projet"] },
+            2: { titre: "Style", declinaisons: ["Une musique populaire d'une musique savante", "Une musique sacrée d'une musique profane", "Une musique de circonstance (fête, cérémonie, hommage, commémoration)", "Une musique traditionnelle", "Une musique accompagnant l'image fixe ou animée (cinéma, audiovisuel, multimédia)", "Une musique de consommation (publicité sous toutes ses formes)", "Une musique « pure »", "Une musique au service du mouvement et de la scène (danse, ballet)", "Une musique dans différentes interprétations ou arrangements", "Une musique narrative, descriptive ou figurative", "Une musique de spectacle vivant (interprètes et auditeurs en présence)", "Une musique occidentale d'une musique non occidentale", "Deux styles de musique de régions de France", "Deux styles de musiques de différents continents", "Un collage musical et l'origine des cultures ou styles juxtaposés", "Un métissage et l'origine des cultures métissées", "Deux styles de musique de périodes chronologiques éloignées l'une de l'autre", "Deux styles de musique de périodes chronologiques proches", "Un style de musique caractéristique d'une époque de l'histoire des arts", "Différents styles et différentes époques dans une même œuvre"] },
+            3: { titre: "Timbre et espace", declinaisons: ["Bruit et son", "Le registre, la hauteur", "L'enveloppe du son: attaque (plus particulièrement), entretien, chute", "La richesse harmonique (le spectre)", "Espace et densité sonore (du soliste à la formation chœur et orchestre et à la musique mixte)", "Timbre et qualité de la texture", "Par les techniques et les modes de jeu", "Par superposition des couleurs sonores", "Par fusion de timbres", "Par des effets divers, d'origine mécanique (sourdine) ou électronique et numérique", "Par l'acoustique du lieu de production et de diffusion", "Par la diffusion sur haut-parleurs", "En interaction avec les autres composantes, mélodie, rythme, harmonie, dynamique", "Par répartition et organisation temporelles des masses sonores", "Par répartition et organisation spatiales des masses sonores"] },
+            4: { titre: "Dynamique", declinaisons: ["Son brut", "Intensité du son et intensité du geste", "Différentes nuances (de pianissimo à fortissimo)", "Évolution progressive de l'intensité (crescendo, decrescendo)", "Intensité stable ou contrastée", "Accentuation", "Diversité des modes de jeu", "Densité du son (de une à plusieurs sources sonores jouant les mêmes sons)", "Potentialité des grandes catégories de formation (instrument seul, combo jazz, orchestre, etc.)", "Musique acoustique ou amplifiée", "En compressant le son (processus lié à l'enregistrement / à la diffusion)", "Par des ruptures ou des évolutions de la dynamique", "En soulignant les éléments structurant le temps", "En différenciant les fonctions musicales complémentaires", "En changeant les modes de jeu", "En variant l'instrumentation et l'orchestration", "En jouant sur l'amplification"] },
+            5: { titre: "Temps et rythme", declinaisons: ["Temps non pulsé - lisse, ou temps pulsé - strié", "Pulsation", "Tempo", "Durées et densité rythmique", "Accentuations", "Temps forts et faibles, carrure", "Respiration et décalage (anacrouse et syncope)", "Temps binaire et temps ternaire", "Formules rythmiques simples et structurantes", "Gestes musicaux (ou Unités sémiotiques temporelles [UST]) : élan, étirement, chute etc.", "Par des ruptures ou des évolutions de tempo", "Par la modification des durées d'un motif structurant", "Par l'accentuation d'éléments de nature mélodique", "Par le décalage des appuis attendu: (syncope)", "Par des changements de carrure", "Par la superposition de rythmes complémentaires", "Par la superposition de rythmes de carrures différentes", "Par opposition des différents tempos d'une œuvre", "Par opposition de différentes métriques et carrures", "Par la présentation modulée d'une formule rythmique d'accompagnement"] },
+            6: { titre: "Forme", declinaisons: ["Identification d'un élément structurant (thème, cellule, motif, rythme, etc.)", "Alternance de continuités et de ruptures", "Ruptures de différentes natures (mélodique, rythmique, harmonique, dynamique, de timbre, etc.)", "Progressions par paliers (relevant des hauteurs, de la dynamique, du timbre de l'espace, etc.)", "Des marqueurs récurrents (relatifs la dynamique, au rythme, à la mélodie, au timbre, à l'espace, à l'harmonie, etc.)", "En installant un ordre par : Parties, Thèmes, Motifs", "En installant des relations : D'identité, De ressemblance, De différence", "En organisant des traitements de : Répétition, Citation, Variation, Développement", "Par addition (forme strophique, forme à couplets et refrain)", "Par répétition différée (ABA, rondo, etc.)", "Par variation (sur basse obstinée, sur thème, sur grille harmonique)", "Par aléas (forme ouverte, improvisation)", "Par argument extra musical (musique à programme)"] },
+            7: { titre: "Successif et simultané", declinaisons: ["Suite de sons conjoints ; suite de sons disjoints ; combinaisons", "Répétition d'un motif simple rythmique et/ou mélodique", "Caractère suspensif ou conclusif d'une ligne mélodique", "Accords, agrégats, clusters", "Plans sonores et fonctions musicales", "Polyphonie, polyrythmie, hétérophonie", "Par récurrence simple d'un motif (ostinato, basse obstinée, etc.)", "Par récurrence variée d'un motif (variations)", "Par imitation", "Par accumulation", "Par développement", "Par association de fonctions (ligne mélodique principale et accompagnement, etc.)", "Par montage, par mixage (tuilage, fondu enchaîné, etc.)", "Par le travail thématique", "Par des tensions et détentes harmoniques", "Par des cadences", "Par l'organisation tonale, atonale, modale", "Par des superpositions (doublures diverses)", "Par des ponctuations de diverses natures"] }
+        };
+
+        function MusicSequenceBuilder() {
+            const [sequences, setSequences] = useState(() => {
+                const saved = localStorage.getItem('musicSequences');
+                return saved ? JSON.parse(saved) : [];
+            });
+
+            const [currentSequence, setCurrentSequence] = useState({
+                titre: '', niveau: '', cycle: '', numeroSequence: '1', question: '', problematique: '',
+                declinaisonsSelectionnees: [], competencesDeclinaisons: [], domainesDeclinaisons: [],
+                vocabulaire: [], oeuvreReference: '', oeuvresComplementaires: ['', '', ''],
+                projetMusical: '', histoireDesArts: '', duree: '4'
+            });
+
+            const [ui, setUi] = useState({
+                showForm: false, showCycleSelection: true, showObjectifs: false, showCompetences: false,
+                currentCycle: '', expandedObjectif: null, expandedCompetence: null, expandedDomaine: null,
+                searchTerm: '', editingId: null, filterNiveau: '', showProgression: false
+            });
+
+            const [newVocabulaire, setNewVocabulaire] = useState('');
+            const [expandedSequences, setExpandedSequences] = useState({});
+
+            useEffect(() => {
+                localStorage.setItem('musicSequences', JSON.stringify(sequences));
+            }, [sequences]);
+
+            const handleSelectCycle = (niveau) => {
+                const cycle = niveau === '6ème' ? 'Cycle 3' : 'Cycle 4';
+                setCurrentSequence({ ...currentSequence, niveau, cycle });
+                setUi({ ...ui, currentCycle: cycle, showCycleSelection: false });
+            };
+
+            const handleDeleteSequence = (id, titre) => {
+                if (window.confirm(`Supprimer la séquence "${titre}" ?`)) {
+                    setSequences(sequences.filter(s => s.id !== id));
+                }
+            };
+
+            const handleEditSequence = (sequence) => {
+                setCurrentSequence(sequence);
+                setUi({
+                    ...ui,
+                    showForm: true,
+                    showCycleSelection: false,
+                    showObjectifs: false,
+                    showCompetences: false,
+                    currentCycle: sequence.cycle,
+                    editingId: sequence.id
+                });
+            };
+
+            const handleExportPDF = (sequence) => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                let y = 20;
+                const lineHeight = 7;
+                const pageHeight = 280;
+                
+                // Fonction helper pour ajouter du texte avec gestion des pages
+                const addText = (text, fontSize = 12, isBold = false) => {
+                    doc.setFontSize(fontSize);
+                    doc.setFont(undefined, isBold ? 'bold' : 'normal');
+                    
+                    const lines = doc.splitTextToSize(text, 170);
+                    lines.forEach(line => {
+                        if (y > pageHeight) {
+                            doc.addPage();
+                            y = 20;
+                        }
+                        doc.text(line, 20, y);
+                        y += fontSize === 16 ? 10 : lineHeight;
+                    });
+                };
+
+                // Titre
+                addText('SÉQUENCE PÉDAGOGIQUE MUSICALE', 16, true);
+                y += 5;
+
+                // Informations générales
+                addText('INFORMATIONS GÉNÉRALES', 14, true);
+                addText(`Niveau : ${sequence.niveau}`, 11);
+                addText(`Cycle : ${sequence.cycle}`, 11);
+                addText(`Séquence n° : ${sequence.numeroSequence}`, 11);
+                addText(`Durée : ${sequence.duree} séances`, 11);
+                addText(`Titre : ${sequence.titre}`, 11);
+                if (sequence.question) addText(`Question directrice : ${sequence.question}`, 11);
+                if (sequence.problematique) addText(`Problématique : ${sequence.problematique}`, 11);
+                y += 5;
+
+                // Objectifs
+                if (sequence.declinaisonsSelectionnees && sequence.declinaisonsSelectionnees.length > 0) {
+                    addText('OBJECTIFS ET ATTENDUS DE FIN DE CYCLE', 14, true);
+                    sequence.declinaisonsSelectionnees.forEach(key => {
+                        const [objId, ...decParts] = key.split('-');
+                        const objectif = objectifsFinCycle.find(o => o.id === parseInt(objId));
+                        if (objectif) {
+                            addText(`Objectif ${objId} : ${objectif.titre}`, 11, true);
+                            addText(`→ ${decParts.join('-')}`, 10);
+                        }
+                    });
+                    y += 5;
+                }
+
+                // Compétences
+                if (sequence.competencesDeclinaisons && sequence.competencesDeclinaisons.length > 0) {
+                    addText('COMPÉTENCES TRAVAILLÉES', 14, true);
+                    sequence.competencesDeclinaisons.forEach(key => {
+                        const [compId, ...decParts] = key.split('-');
+                        const competences = sequence.cycle === 'Cycle 3' ? competencesCycle3 : competencesCycle4;
+                        const comp = competences.find(c => c.id === parseInt(compId));
+                        if (comp) {
+                            addText(`${comp.categorie}`, 11, true);
+                            addText(`→ ${decParts.join('-')}`, 10);
+                        }
+                    });
+                    y += 5;
+                }
+
+                // Domaines techniques
+                if (sequence.domainesDeclinaisons && sequence.domainesDeclinaisons.length > 0) {
+                    addText('DOMAINES TECHNIQUES', 14, true);
+                    sequence.domainesDeclinaisons.forEach(key => {
+                        const [domId, ...decParts] = key.split('-');
+                        const domaine = domainesTechniques[domId];
+                        if (domaine) {
+                            addText(`${domaine.titre}`, 11, true);
+                            addText(`→ ${decParts.join('-')}`, 10);
+                        }
+                    });
+                    y += 5;
+                }
+
+                // Vocabulaire
+                if (sequence.vocabulaire && sequence.vocabulaire.length > 0) {
+                    addText('VOCABULAIRE', 14, true);
+                    addText(sequence.vocabulaire.join(', '), 10);
+                    y += 5;
+                }
+
+                // Œuvres
+                if (sequence.oeuvreReference) {
+                    addText('ŒUVRE DE RÉFÉRENCE', 14, true);
+                    addText(sequence.oeuvreReference, 10);
+                    y += 5;
+                }
+
+                if (sequence.oeuvresComplementaires && sequence.oeuvresComplementaires.filter(o => o).length > 0) {
+                    addText('ŒUVRES COMPLÉMENTAIRES', 14, true);
+                    sequence.oeuvresComplementaires.filter(o => o).forEach(oeuvre => {
+                        addText(`• ${oeuvre}`, 10);
+                    });
+                    y += 5;
+                }
+
+                // Projet musical
+                if (sequence.projetMusical) {
+                    addText('PROJET MUSICAL', 14, true);
+                    addText(sequence.projetMusical, 10);
+                    y += 5;
+                }
+
+                // Histoire des Arts
+                if (sequence.histoireDesArts) {
+                    addText('HISTOIRE DES ARTS', 14, true);
+                    addText(sequence.histoireDesArts, 10);
+                }
+
+                // Date de création et créateur
+                y += 10;
+                const date = new Date().toLocaleDateString('fr-FR');
+                addText(`Document généré le ${date}`, 8);
+                addText(`Créé avec l'outil de Julien Sang`, 8);
+
+                // Sauvegarder le PDF
+                doc.save(`sequence_${sequence.niveau}_${sequence.numeroSequence}.pdf`);
+            };
+
+            const handleExportSequence = (sequence) => {
+                const dataStr = JSON.stringify(sequence, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `sequence_${sequence.niveau}_${sequence.numeroSequence}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            };
+
+            const toggleDeclinaison = (type, id, value) => {
+                const key = `${id}-${value}`;
+                const field = type === 'objectifs' ? 'declinaisonsSelectionnees' : `${type}Declinaisons`;
+                const current = currentSequence[field] || [];
+                const maxValues = type === 'objectifs' ? 3 : type === 'competences' ? 4 : 100;
+                
+                if (current.includes(key)) {
+                    setCurrentSequence({ ...currentSequence, [field]: current.filter(d => d !== key) });
+                } else if (current.length < maxValues) {
+                    setCurrentSequence({ ...currentSequence, [field]: [...current, key] });
+                }
+            };
+
+            const handleSaveSequence = () => {
+                // Vérifier les conditions obligatoires
+                const hasGesteVocal = currentSequence.domainesDeclinaisons.some(d => d.startsWith('1-'));
+                const hasStyle = currentSequence.domainesDeclinaisons.some(d => d.startsWith('2-'));
+                
+                if (!hasGesteVocal || !hasStyle) {
+                    alert('Attention ! Vous devez sélectionner au moins :\n- 1 élément dans "Geste vocal" (domaine 1)\n- 1 élément dans "Style" (domaine 2)');
+                    return;
+                }
+                
+                if (currentSequence.titre && currentSequence.competencesDeclinaisons.length >= 3) {
+                    const newSequence = { ...currentSequence, id: ui.editingId || Date.now() };
+                    
+                    if (ui.editingId) {
+                        setSequences(sequences.map(s => s.id === ui.editingId ? newSequence : s));
+                    } else {
+                        setSequences([...sequences, newSequence]);
+                    }
+                    
+                    setCurrentSequence({
+                        titre: '', niveau: '', cycle: '', numeroSequence: '1', question: '', problematique: '',
+                        declinaisonsSelectionnees: [], competencesDeclinaisons: [], domainesDeclinaisons: [],
+                        vocabulaire: [], oeuvreReference: '', oeuvresComplementaires: ['', '', ''],
+                        projetMusical: '', histoireDesArts: '', duree: '4'
+                    });
+                    
+                    setUi({ ...ui, showForm: false, showCycleSelection: true, showObjectifs: false, 
+                             showCompetences: false, currentCycle: '', editingId: null });
+                }
+            };
+
+            const filteredSequences = sequences.filter(seq => {
+                // Filtre par recherche textuelle
+                const searchLower = ui.searchTerm.toLowerCase();
+                const matchesSearch = !ui.searchTerm || 
+                    seq.titre.toLowerCase().includes(searchLower) ||
+                    seq.niveau.toLowerCase().includes(searchLower) ||
+                    (seq.question && seq.question.toLowerCase().includes(searchLower)) ||
+                    (seq.problematique && seq.problematique.toLowerCase().includes(searchLower)) ||
+                    (seq.oeuvreReference && seq.oeuvreReference.toLowerCase().includes(searchLower)) ||
+                    (seq.projetMusical && seq.projetMusical.toLowerCase().includes(searchLower)) ||
+                    (seq.vocabulaire && seq.vocabulaire.some(v => v.toLowerCase().includes(searchLower)));
+                
+                // Filtre par niveau
+                const matchesNiveau = !ui.filterNiveau || seq.niveau === ui.filterNiveau;
+                
+                return matchesSearch && matchesNiveau;
+            });
+
+            // Génération du tableau de progression
+            const generateProgressionTable = () => {
+                const niveaux = ['6ème', '5ème', '4ème', '3ème'];
+                const progression = {};
+                
+                niveaux.forEach(niveau => {
+                    progression[niveau] = sequences
+                        .filter(seq => seq.niveau === niveau)
+                        .sort((a, b) => parseInt(a.numeroSequence) - parseInt(b.numeroSequence));
+                });
+                
+                return progression;
+            };
+
+            const getCompetences = () => {
+                const ids = [...new Set(currentSequence.declinaisonsSelectionnees.map(d => parseInt(d.split('-')[0])))];
+                const list = ui.currentCycle === 'Cycle 3' ? competencesCycle3 : competencesCycle4;
+                return list.filter(c => ids.includes(c.id));
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
+                    <div className="max-w-7xl mx-auto">
+                        {/* Header */}
+                        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+                                        <Icons.MusicLogo />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                                            Créateur de Séquences Musicales
+                                        </h1>
+                                        <p className="text-xs text-gray-500">Créé par Julien Sang • Outil pédagogique pour l'enseignement musical</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setUi({ ...ui, showForm: !ui.showForm, showCycleSelection: true, editingId: null })}
+                                    className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700"
+                                >
+                                    {ui.showForm ? <Icons.X /> : <Icons.Plus />}
+                                    {ui.showForm ? 'Fermer' : 'Nouvelle Séquence'}
+                                </button>
+                            </div>
+                            
+                            {/* Barre de recherche et filtres */}
+                            {!ui.showForm && sequences.length > 0 && (
+                                <div className="mt-4 space-y-3">
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Rechercher dans les séquences..."
+                                            value={ui.searchTerm}
+                                            onChange={(e) => setUi({ ...ui, searchTerm: e.target.value })}
+                                            className="flex-1 px-4 py-2 border rounded-lg"
+                                        />
+                                        <select 
+                                            value={ui.filterNiveau || ''}
+                                            onChange={(e) => setUi({ ...ui, filterNiveau: e.target.value })}
+                                            className="px-4 py-2 border rounded-lg"
+                                        >
+                                            <option value="">Tous niveaux</option>
+                                            <option value="6ème">6ème</option>
+                                            <option value="5ème">5ème</option>
+                                            <option value="4ème">4ème</option>
+                                            <option value="3ème">3ème</option>
+                                        </select>
+                                        <button
+                                            onClick={() => setUi({ ...ui, showProgression: !ui.showProgression })}
+                                            className={`px-4 py-2 rounded-lg ${ui.showProgression ? 'bg-purple-700 text-white' : 'bg-purple-600 text-white hover:bg-purple-700'}`}
+                                        >
+                                            📊 Progression
+                                        </button>
+                                    </div>
+                                    {(ui.searchTerm || ui.filterNiveau) && (
+                                        <p className="text-sm text-gray-600">
+                                            {filteredSequences.length} séquence(s) trouvée(s)
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Form */}
+                            {ui.showForm && (
+                                <div className="bg-gray-50 rounded-xl p-6 border-2 border-indigo-200">
+                                    {ui.showCycleSelection ? (
+                                        <div className="text-center py-8">
+                                            <h2 className="text-2xl font-semibold mb-6">Choisissez le niveau</h2>
+                                            <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+                                                <button onClick={() => handleSelectCycle('6ème')} className="bg-white border-4 border-blue-400 rounded-xl p-8 hover:bg-blue-50">
+                                                    <h3 className="text-3xl font-bold text-blue-600">6ème</h3>
+                                                    <p className="text-xl">Cycle 3</p>
+                                                </button>
+                                                <div className="bg-white border-4 border-purple-400 rounded-xl p-8">
+                                                    <h3 className="text-2xl font-bold text-purple-600">Cycle 4</h3>
+                                                    <div className="flex gap-2 justify-center mt-4">
+                                                        {['5ème', '4ème', '3ème'].map(n => (
+                                                            <button key={n} onClick={() => handleSelectCycle(n)} 
+                                                                className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-700">
+                                                                {n}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : ui.showObjectifs ? (
+                                        <div>
+                                            <h2 className="text-2xl font-semibold mb-4">Objectifs et attendus de fin de cycle</h2>
+                                            <div className="bg-yellow-50 p-3 mb-4 rounded">
+                                                <p className="text-sm font-semibold">
+                                                    Sélectionnez 3 déclinaisons ({currentSequence.declinaisonsSelectionnees.length}/3)
+                                                </p>
+                                            </div>
+                                            {objectifsFinCycle.map(obj => (
+                                                <div key={obj.id} className="border rounded-lg mb-3">
+                                                    <button onClick={() => setUi({ ...ui, expandedObjectif: ui.expandedObjectif === obj.id ? null : obj.id })}
+                                                        className="w-full text-left p-4 hover:bg-gray-50">
+                                                        <div className="flex justify-between">
+                                                            <span><b>{obj.id}.</b> {obj.titre}</span>
+                                                            {ui.expandedObjectif === obj.id ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+                                                        </div>
+                                                    </button>
+                                                    {ui.expandedObjectif === obj.id && (
+                                                        <div className="p-4 bg-gray-50">
+                                                            {obj.declinaisons.map((dec, idx) => (
+                                                                <label key={idx} className="flex items-start gap-3 p-2 hover:bg-white rounded cursor-pointer">
+                                                                    <input type="checkbox"
+                                                                        checked={currentSequence.declinaisonsSelectionnees.includes(`${obj.id}-${dec}`)}
+                                                                        onChange={() => toggleDeclinaison('objectifs', obj.id, dec)}
+                                                                        disabled={!currentSequence.declinaisonsSelectionnees.includes(`${obj.id}-${dec}`) && 
+                                                                                 currentSequence.declinaisonsSelectionnees.length >= 3}
+                                                                    />
+                                                                    <span className="text-sm">{dec}</span>
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            <button onClick={() => currentSequence.declinaisonsSelectionnees.length === 3 && setUi({ ...ui, showObjectifs: false, showCompetences: true })}
+                                                disabled={currentSequence.declinaisonsSelectionnees.length !== 3}
+                                                className="w-full bg-indigo-600 text-white py-3 rounded-lg disabled:bg-gray-400">
+                                                Continuer →
+                                            </button>
+                                        </div>
+                                    ) : ui.showCompetences ? (
+                                        <div>
+                                            <h2 className="text-2xl font-semibold mb-4">Compétences travaillées</h2>
+                                            <div className="bg-yellow-50 p-3 mb-4 rounded">
+                                                <p className="text-sm font-semibold">
+                                                    Sélectionnez 3-4 déclinaisons ({currentSequence.competencesDeclinaisons.length}/4)
+                                                </p>
+                                            </div>
+                                            {getCompetences().map(cat => (
+                                                <div key={cat.id} className="border rounded-lg mb-3">
+                                                    <button onClick={() => setUi({ ...ui, expandedCompetence: ui.expandedCompetence === cat.id ? null : cat.id })}
+                                                        className="w-full text-left p-4 hover:bg-gray-50">
+                                                        <div className="flex justify-between">
+                                                            <span><b>{cat.id}.</b> {cat.categorie}</span>
+                                                            {ui.expandedCompetence === cat.id ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+                                                        </div>
+                                                    </button>
+                                                    {ui.expandedCompetence === cat.id && (
+                                                        <div className="p-4 bg-gray-50">
+                                                            {cat.competences.map((comp, idx) => (
+                                                                <label key={idx} className="flex items-start gap-3 p-2 hover:bg-white rounded cursor-pointer">
+                                                                    <input type="checkbox"
+                                                                        checked={currentSequence.competencesDeclinaisons.includes(`${cat.id}-${comp}`)}
+                                                                        onChange={() => toggleDeclinaison('competences', cat.id, comp)}
+                                                                        disabled={!currentSequence.competencesDeclinaisons.includes(`${cat.id}-${comp}`) && 
+                                                                                 currentSequence.competencesDeclinaisons.length >= 4}
+                                                                    />
+                                                                    <span className="text-sm">{comp}</span>
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            <button onClick={() => currentSequence.competencesDeclinaisons.length >= 3 && setUi({ ...ui, showCompetences: false })}
+                                                disabled={currentSequence.competencesDeclinaisons.length < 3}
+                                                className="w-full bg-indigo-600 text-white py-3 rounded-lg disabled:bg-gray-400">
+                                                Continuer →
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <h2 className="text-2xl font-semibold mb-4">
+                                                {ui.editingId ? '✏️ Modifier' : 'Nouvelle'} séquence - {currentSequence.niveau} ({currentSequence.cycle})
+                                            </h2>
+                                            <div className="grid md:grid-cols-2 gap-4 mb-6">
+                                                <div>
+                                                    <label className="block text-sm font-medium mb-2">Numéro de séquence</label>
+                                                    <input type="number" value={currentSequence.numeroSequence}
+                                                        onChange={(e) => setCurrentSequence({ ...currentSequence, numeroSequence: e.target.value })}
+                                                        className="w-full px-4 py-2 border rounded-lg" min="1" />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium mb-2">Durée (séances)</label>
+                                                    <input type="number" value={currentSequence.duree}
+                                                        onChange={(e) => setCurrentSequence({ ...currentSequence, duree: e.target.value })}
+                                                        className="w-full px-4 py-2 border rounded-lg" min="1" max="12" />
+                                                </div>
+                                            </div>
+                                            <div className="mb-6">
+                                                <label className="block text-sm font-medium mb-2">Titre de la séquence</label>
+                                                <input type="text" value={currentSequence.titre}
+                                                    onChange={(e) => setCurrentSequence({ ...currentSequence, titre: e.target.value })}
+                                                    className="w-full px-4 py-2 border rounded-lg" />
+                                            </div>
+                                            <div className="mb-6">
+                                                <label className="block text-sm font-medium mb-2">
+                                                    {ui.currentCycle === 'Cycle 3' ? 'Question directrice' : 'Problématique'}
+                                                </label>
+                                                <input type="text" value={ui.currentCycle === 'Cycle 3' ? currentSequence.question : currentSequence.problematique}
+                                                    onChange={(e) => setCurrentSequence({
+                                                        ...currentSequence,
+                                                        [ui.currentCycle === 'Cycle 3' ? 'question' : 'problematique']: e.target.value
+                                                    })}
+                                                    className="w-full px-4 py-2 border rounded-lg" />
+                                            </div>
+                                            <button onClick={() => setUi({ ...ui, showObjectifs: true })}
+                                                className="w-full bg-indigo-600 text-white py-3 rounded-lg mb-6">
+                                                Définir les objectifs →
+                                            </button>
+
+                                            {currentSequence.competencesDeclinaisons.length > 0 && (
+                                                <>
+                                                    <div className="mt-6 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
+                                                        <h3 className="text-lg font-semibold mb-3 text-yellow-800">⚠️ Domaines techniques obligatoires</h3>
+                                                        <p className="text-sm text-yellow-700 mb-2">Vous devez sélectionner au minimum :</p>
+                                                        <ul className="text-sm text-yellow-700 list-disc list-inside">
+                                                            <li className={currentSequence.domainesDeclinaisons.some(d => d.startsWith('1-')) ? 'text-green-700 font-semibold' : ''}>
+                                                                {currentSequence.domainesDeclinaisons.some(d => d.startsWith('1-')) ? '✓' : '○'} Au moins 1 élément dans "Geste vocal"
+                                                            </li>
+                                                            <li className={currentSequence.domainesDeclinaisons.some(d => d.startsWith('2-')) ? 'text-green-700 font-semibold' : ''}>
+                                                                {currentSequence.domainesDeclinaisons.some(d => d.startsWith('2-')) ? '✓' : '○'} Au moins 1 élément dans "Style"
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+
+                                                    <h3 className="text-xl font-semibold mb-4 mt-6">Domaines techniques</h3>
+                                                    {Object.entries(domainesTechniques).map(([id, domaine]) => {
+                                                        const isRequired = id === '1' || id === '2';
+                                                        const hasSelection = currentSequence.domainesDeclinaisons.some(d => d.startsWith(`${id}-`));
+                                                        return (
+                                                            <div key={id} className={`border-2 rounded-lg mb-3 ${isRequired && !hasSelection ? 'border-red-400' : 'border-gray-200'}`}>
+                                                                <button onClick={() => setUi({ ...ui, expandedDomaine: ui.expandedDomaine === parseInt(id) ? null : parseInt(id) })}
+                                                                    className={`w-full text-left p-4 ${hasSelection ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
+                                                                    <div className="flex justify-between">
+                                                                        <span>
+                                                                            <b>{id}.</b> {domaine.titre} 
+                                                                            {isRequired && <span className="text-red-500 ml-2 text-sm font-bold">* Obligatoire</span>}
+                                                                            {hasSelection && <span className="text-green-600 ml-2">✓</span>}
+                                                                        </span>
+                                                                        {ui.expandedDomaine === parseInt(id) ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+                                                                    </div>
+                                                                </button>
+                                                                {ui.expandedDomaine === parseInt(id) && (
+                                                                    <div className="p-4 bg-gray-50">
+                                                                        {domaine.declinaisons.map((dec, idx) => (
+                                                                            <label key={idx} className="flex items-start gap-3 p-2 hover:bg-white rounded cursor-pointer">
+                                                                                <input type="checkbox"
+                                                                                    checked={currentSequence.domainesDeclinaisons.includes(`${id}-${dec}`)}
+                                                                                    onChange={() => toggleDeclinaison('domaines', id, dec)} />
+                                                                                <span className="text-sm">{dec}</span>
+                                                                            </label>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+
+                                                    <div className="mt-6">
+                                                        <h3 className="text-lg font-semibold mb-3">Vocabulaire</h3>
+                                                        <div className="flex gap-2 mb-3">
+                                                            <input type="text" value={newVocabulaire}
+                                                                onChange={(e) => setNewVocabulaire(e.target.value)}
+                                                                onKeyPress={(e) => e.key === 'Enter' && newVocabulaire.trim() && 
+                                                                    (setCurrentSequence({ ...currentSequence, vocabulaire: [...currentSequence.vocabulaire, newVocabulaire.trim()] }), setNewVocabulaire(''))}
+                                                                className="flex-1 px-4 py-2 border rounded-lg" placeholder="Ajouter un mot..." />
+                                                            <button onClick={() => newVocabulaire.trim() && 
+                                                                (setCurrentSequence({ ...currentSequence, vocabulaire: [...currentSequence.vocabulaire, newVocabulaire.trim()] }), setNewVocabulaire(''))}
+                                                                className="bg-indigo-600 text-white px-4 py-2 rounded-lg">
+                                                                <Icons.Plus />
+                                                            </button>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {currentSequence.vocabulaire.map((mot, idx) => (
+                                                                <span key={idx} className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full flex items-center gap-2">
+                                                                    {mot}
+                                                                    <button onClick={() => setCurrentSequence({
+                                                                        ...currentSequence,
+                                                                        vocabulaire: currentSequence.vocabulaire.filter((_, i) => i !== idx)
+                                                                    })} className="text-indigo-600">
+                                                                        <Icons.X />
+                                                                    </button>
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-6">
+                                                        <h3 className="text-lg font-semibold mb-3">Œuvre de référence</h3>
+                                                        <input type="text" value={currentSequence.oeuvreReference}
+                                                            onChange={(e) => setCurrentSequence({ ...currentSequence, oeuvreReference: e.target.value })}
+                                                            className="w-full px-4 py-2 border rounded-lg" 
+                                                            placeholder="Ex: Symphonie n°5 - Beethoven" />
+                                                    </div>
+
+                                                    <div className="mt-6">
+                                                        <h3 className="text-lg font-semibold mb-3">Œuvres complémentaires (3 max)</h3>
+                                                        {[0, 1, 2].map(idx => (
+                                                            <input key={idx} type="text" 
+                                                                value={currentSequence.oeuvresComplementaires[idx] || ''}
+                                                                onChange={(e) => {
+                                                                    const newOeuvres = [...currentSequence.oeuvresComplementaires];
+                                                                    newOeuvres[idx] = e.target.value;
+                                                                    setCurrentSequence({ ...currentSequence, oeuvresComplementaires: newOeuvres });
+                                                                }}
+                                                                className="w-full px-4 py-2 border rounded-lg mb-2" 
+                                                                placeholder={`Œuvre complémentaire ${idx + 1} (optionnel)`} />
+                                                        ))}
+                                                    </div>
+
+                                                    <div className="mt-6">
+                                                        <h3 className="text-lg font-semibold mb-3">Projet musical</h3>
+                                                        <textarea value={currentSequence.projetMusical}
+                                                            onChange={(e) => setCurrentSequence({ ...currentSequence, projetMusical: e.target.value })}
+                                                            className="w-full px-4 py-2 border rounded-lg h-24" 
+                                                            placeholder="Description du projet musical..." />
+                                                    </div>
+
+                                                    <div className="mt-6">
+                                                        <h3 className="text-lg font-semibold mb-3">Histoire des Arts</h3>
+                                                        <textarea value={currentSequence.histoireDesArts}
+                                                            onChange={(e) => setCurrentSequence({ ...currentSequence, histoireDesArts: e.target.value })}
+                                                            className="w-full px-4 py-2 border rounded-lg h-24" 
+                                                            placeholder="Liens avec l'histoire des arts..." />
+                                                    </div>
+
+                                                    <button onClick={handleSaveSequence}
+                                                        className="w-full bg-green-600 text-white py-3 rounded-lg mt-6 hover:bg-green-700">
+                                                        <Icons.Save /> Enregistrer la séquence
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Tableau de progression annuelle */}
+                        {ui.showProgression && (
+                            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xl font-bold">📊 Tableau de progression annuelle</h2>
+                                    <button
+                                        onClick={() => setUi({ ...ui, showProgression: false })}
+                                        className="text-gray-500 hover:text-gray-700"
+                                    >
+                                        <Icons.X />
+                                    </button>
+                                </div>
+                                
+                                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {['6ème', '5ème', '4ème', '3ème'].map(niveau => {
+                                        const seqNiveau = sequences
+                                            .filter(seq => seq.niveau === niveau)
+                                            .sort((a, b) => parseInt(a.numeroSequence) - parseInt(b.numeroSequence));
+                                        
+                                        return (
+                                            <div key={niveau} className="border-2 border-gray-200 rounded-lg p-4">
+                                                <h3 className={`text-lg font-bold mb-3 ${
+                                                    niveau === '6ème' ? 'text-blue-600' : 
+                                                    niveau === '5ème' ? 'text-green-600' :
+                                                    niveau === '4ème' ? 'text-orange-600' : 
+                                                    'text-purple-600'
+                                                }`}>
+                                                    {niveau} ({seqNiveau.length} séquences)
+                                                </h3>
+                                                
+                                                {seqNiveau.length === 0 ? (
+                                                    <p className="text-gray-400 text-sm italic">Aucune séquence</p>
+                                                ) : (
+                                                    <div className="space-y-2">
+                                                        {seqNiveau.map(seq => (
+                                                            <div key={seq.id} className="bg-gray-50 rounded p-2">
+                                                                <div className="flex items-start gap-2">
+                                                                    <span className="bg-gray-600 text-white text-xs rounded px-1">
+                                                                        {seq.numeroSequence}
+                                                                    </span>
+                                                                    <div className="flex-1">
+                                                                        <p className="text-sm font-medium">{seq.titre}</p>
+                                                                        <p className="text-xs text-gray-500">{seq.duree} séances</p>
+                                                                        {seq.question && (
+                                                                            <p className="text-xs text-blue-600 mt-1">Q: {seq.question.substring(0, 50)}...</p>
+                                                                        )}
+                                                                        {seq.problematique && (
+                                                                            <p className="text-xs text-purple-600 mt-1">P: {seq.problematique.substring(0, 50)}...</p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        
+                                                        {/* Calcul du total de séances */}
+                                                        <div className="border-t pt-2 mt-2">
+                                                            <p className="text-xs font-semibold text-gray-600">
+                                                                Total : {seqNiveau.reduce((sum, seq) => sum + parseInt(seq.duree || 0), 0)} séances
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                
+                                {/* Résumé global */}
+                                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                                    <h3 className="font-semibold mb-2">Résumé global</h3>
+                                    <div className="grid md:grid-cols-4 gap-4 text-sm">
+                                        <div>
+                                            <span className="font-medium">Total séquences :</span> {sequences.length}
+                                        </div>
+                                        <div>
+                                            <span className="font-medium">Total séances :</span> {sequences.reduce((sum, seq) => sum + parseInt(seq.duree || 0), 0)}
+                                        </div>
+                                        <div>
+                                            <span className="font-medium">Moyenne par séquence :</span> {
+                                                sequences.length ? 
+                                                Math.round(sequences.reduce((sum, seq) => sum + parseInt(seq.duree || 0), 0) / sequences.length) : 
+                                                0
+                                            } séances
+                                        </div>
+                                        <div>
+                                            <span className="font-medium">Niveaux couverts :</span> {
+                                                [...new Set(sequences.map(s => s.niveau))].length
+                                            }/4
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Liste des séquences */}
+                        <div className="grid md:grid-cols-2 gap-6">
+                            {filteredSequences.map(seq => (
+                                <div key={seq.id} className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-indigo-600">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div>
+                                            <span className="bg-indigo-600 text-white px-3 py-1 rounded-full text-sm">
+                                                Séquence {seq.numeroSequence}
+                                            </span>
+                                            <h3 className="text-xl font-bold mt-2">{seq.titre}</h3>
+                                            <p className="text-sm text-gray-500">{seq.niveau} • {seq.duree} séances</p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => handleEditSequence(seq)}
+                                                className="text-gray-500 hover:text-blue-600" title="Modifier">
+                                                <Icons.Edit />
+                                            </button>
+                                            <button onClick={() => handleExportPDF(seq)}
+                                                className="text-gray-500 hover:text-blue-600" title="Télécharger PDF">
+                                                <Icons.FileText />
+                                            </button>
+                                            <button onClick={() => handleDeleteSequence(seq.id, seq.titre)}
+                                                className="text-gray-500 hover:text-red-600" title="Supprimer">
+                                                <Icons.Trash2 />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {(seq.question || seq.problematique) && (
+                                        <div className="bg-indigo-50 p-3 rounded mb-3">
+                                            <p className="text-sm italic">{seq.question || seq.problematique}</p>
+                                        </div>
+                                    )}
+                                    
+                                    {seq.vocabulaire && seq.vocabulaire.length > 0 && (
+                                        <div className="mt-3">
+                                            <p className="text-sm font-semibold mb-1">Vocabulaire:</p>
+                                            <div className="flex flex-wrap gap-1">
+                                                {seq.vocabulaire.slice(0, 5).map((mot, i) => (
+                                                    <span key={i} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">{mot}</span>
+                                                ))}
+                                                {seq.vocabulaire.length > 5 && (
+                                                    <span className="text-xs text-gray-500">+{seq.vocabulaire.length - 5} autres</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {seq.oeuvreReference && (
+                                        <div className="mt-2">
+                                            <p className="text-sm font-semibold">Œuvre de référence:</p>
+                                            <p className="text-xs text-gray-600">{seq.oeuvreReference}</p>
+                                        </div>
+                                    )}
+                                    
+                                    {seq.projetMusical && (
+                                        <div className="mt-2">
+                                            <p className="text-sm font-semibold">Projet musical:</p>
+                                            <p className="text-xs text-gray-600">{seq.projetMusical.substring(0, 50)}{seq.projetMusical.length > 50 ? '...' : ''}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<MusicSequenceBuilder />, document.getElementById('root'));
+    </script>
+</body>
+</html>
